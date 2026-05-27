@@ -13,10 +13,10 @@ fn main() -> flink::Result<()> {
         default.confidence_z(),
     )?;
     let values = (0..10_000).collect::<Vec<u64>>();
-    let workload = MeasurementBuilder::new()
+    let measurement = MeasurementBuilder::new()
         .measure(move || values.iter().copied().sum::<u64>())
-        .build();
-    let result = run_adaptive_measurement(&config, workload)?;
+        .build()?;
+    let result = run_adaptive_measurement(&config, measurement)?;
 
     println!(
         "mean={:.3} ns, median={:.3} ns, samples={}",

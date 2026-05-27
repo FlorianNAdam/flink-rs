@@ -295,8 +295,8 @@ mod tests {
         )
         .unwrap();
         let id = CaseId::new("bench", "var", CaseInput::scalar(42u64)).with_suite(["s1", "s2"]);
-        let workload = MeasurementBuilder::new().measure(|| 1u64).build();
-        let result = run_adaptive_measurement(&config, workload).unwrap();
+        let measurement = MeasurementBuilder::new().measure(|| 1u64).build().unwrap();
+        let result = run_adaptive_measurement(&config, measurement).unwrap();
 
         let mut results = BenchmarkResults::new();
         results.push(BenchmarkResult { id, result });

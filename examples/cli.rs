@@ -2,7 +2,7 @@ use flink::cli::prebuilt;
 use std::thread::sleep;
 use std::time::Duration;
 
-use flink::{Case, InputRange, MeasurementBuilder, WorkloadFn};
+use flink::{Case, InputRange, Measurement, MeasurementBuilder};
 
 fn main() -> flink::Result<()> {
     prebuilt::run(|runner| {
@@ -31,19 +31,19 @@ fn main() -> flink::Result<()> {
     })
 }
 
-fn sum_std_iter(measurement: MeasurementBuilder, case: &Case) -> flink::Result<WorkloadFn> {
+fn sum_std_iter(measurement: MeasurementBuilder, case: &Case) -> flink::Result<Measurement> {
     let input = case.input_required("rows")?;
     let values = (0..input).collect::<Vec<u64>>();
-    Ok(measurement
+    measurement
         .measure(move || values.iter().copied().sum::<u64>())
-        .build())
+        .build()
 }
 
-fn matrix_nested_loop(measurement: MeasurementBuilder, case: &Case) -> flink::Result<WorkloadFn> {
+fn matrix_nested_loop(measurement: MeasurementBuilder, case: &Case) -> flink::Result<Measurement> {
     let rows = case.input_required("rows")? as usize;
     let cols = case.input_required("cols")? as usize;
     let matrix = vec![vec![1u64; cols]; rows];
-    Ok(measurement
+    measurement
         .measure(move || {
             let mut sum = 0u64;
             for row in &matrix {
@@ -53,21 +53,21 @@ fn matrix_nested_loop(measurement: MeasurementBuilder, case: &Case) -> flink::Re
             }
             sum
         })
-        .build())
+        .build()
 }
 
-fn matrix_flat_iter(measurement: MeasurementBuilder, case: &Case) -> flink::Result<WorkloadFn> {
+fn matrix_flat_iter(measurement: MeasurementBuilder, case: &Case) -> flink::Result<Measurement> {
     let rows = case.input_required("rows")? as usize;
     let cols = case.input_required("cols")? as usize;
     let matrix = vec![vec![1u64; cols]; rows];
-    Ok(measurement
+    measurement
         .measure(move || matrix.iter().flat_map(|r| r.iter()).sum::<u64>())
-        .build())
+        .build()
 }
 
-fn sleep_std(measurement: MeasurementBuilder, _case: &Case) -> flink::Result<WorkloadFn> {
-    Ok(measurement
+fn sleep_std(measurement: MeasurementBuilder, _case: &Case) -> flink::Result<Measurement> {
+    measurement
         .measure(|| sleep(Duration::from_micros(155)))
         .baseline(|| sleep(Duration::from_nanos(1)))
-        .build())
+        .build()
 }

@@ -1,7 +1,7 @@
 use std::time::Duration;
 
 use flink::{
-    Case, InputRange, MeasurementBuilder, MeasurementConfig, Runner, RunnerConfig, WorkloadFn,
+    Case, InputRange, Measurement, MeasurementBuilder, MeasurementConfig, Runner, RunnerConfig,
 };
 
 fn main() -> flink::Result<()> {
@@ -36,18 +36,18 @@ fn main() -> flink::Result<()> {
     Ok(())
 }
 
-fn sum_with_iterator(benchmark: MeasurementBuilder, case: &Case) -> flink::Result<WorkloadFn> {
+fn sum_with_iterator(benchmark: MeasurementBuilder, case: &Case) -> flink::Result<Measurement> {
     let rows = case.input_required("rows")?;
     let values = (0..rows).collect::<Vec<u64>>();
-    Ok(benchmark
+    benchmark
         .measure(move || values.iter().copied().sum::<u64>())
-        .build())
+        .build()
 }
 
-fn sum_with_loop(benchmark: MeasurementBuilder, case: &Case) -> flink::Result<WorkloadFn> {
+fn sum_with_loop(benchmark: MeasurementBuilder, case: &Case) -> flink::Result<Measurement> {
     let rows = case.input_required("rows")?;
     let values = (0..rows).collect::<Vec<u64>>();
-    Ok(benchmark
+    benchmark
         .measure(move || {
             let mut sum = 0;
             for value in &values {
@@ -55,5 +55,5 @@ fn sum_with_loop(benchmark: MeasurementBuilder, case: &Case) -> flink::Result<Wo
             }
             sum
         })
-        .build())
+        .build()
 }

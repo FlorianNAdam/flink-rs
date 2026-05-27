@@ -1,11 +1,11 @@
 //! Small evaluation helpers for timing functions across variants and inputs.
 //!
-//! The workload closure is the benchmarked operation. If an operation mutates
+//! The measurement closure is the benchmarked operation. If an operation mutates
 //! state, include the reset, rebuild, or fresh-state construction inside that
 //! closure so every iteration measures the same semantics. Use
 //! [`measure_with_baseline`] when a cheap loop/setup baseline should be sampled
 //! and subtracted from each timing sample. Build immutable state before creating
-//! the workload closure when it should be excluded from measurement.
+//! the measurement closure when it should be excluded from measurement.
 
 #[cfg(feature = "cli")]
 pub mod cli;
@@ -21,7 +21,7 @@ pub use definition::{
     CaseRunner, InputDimension, InputOverrideSpec, InputOverrides, InputRange, IntoBenchmarkPath,
 };
 pub use measurement::{
-    MeasurementBuilder, MeasurementConfig, RunResult, Sample, Stats, Workload, WorkloadFn,
+    Measurement, MeasurementBuilder, MeasurementConfig, RunResult, Sample, Stats,
     calibrate_iterations, measure, measure_with_baseline, required_sample_count,
     run_adaptive_measurement,
 };
@@ -234,17 +234,18 @@ mod tests {
         let setup_count = Rc::new(Cell::new(0));
         setup_count.set(setup_count.get() + 1);
         let values = vec![1_u64, 2, 3];
-        let workload = MeasurementBuilder::new()
+        let measurement = MeasurementBuilder::new()
             .measure(move || values.iter().sum::<u64>())
-            .build();
-        let result = run_adaptive_measurement(&tiny_config(), workload).unwrap();
+            .build()
+            .unwrap();
+        let result = run_adaptive_measurement(&tiny_config(), measurement).unwrap();
 
         assert_eq!(setup_count.get(), 1);
         assert_eq!(result.samples.len(), 2);
     }
 
-    fn noop_case(benchmark: MeasurementBuilder, _case: &Case) -> Result<WorkloadFn> {
-        Ok(benchmark.measure(|| 1_u64).build())
+    fn noop_case(benchmark: MeasurementBuilder, _case: &Case) -> Result<Measurement> {
+        benchmark.measure(|| 1_u64).build()
     }
 
     fn sample(ns_per_iter: f64) -> Sample {

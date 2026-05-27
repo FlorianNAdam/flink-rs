@@ -3,10 +3,10 @@ use std::time::{Duration, Instant};
 
 use crate::Result;
 
+use super::builder::{Measurement, time_loop};
 use super::config::MeasurementConfig;
 use super::data::{RunResult, Sample};
 use super::stats::Stats;
-use super::workload::{Workload, time_loop};
 
 pub fn measure<T>(config: &MeasurementConfig, op: impl FnMut() -> T) -> Result<RunResult> {
     measure_with_optional_baseline(config, op, Option::<fn()>::None)
@@ -62,14 +62,14 @@ fn measure_with_optional_baseline<T, B>(
 
 pub fn run_adaptive_measurement(
     config: &MeasurementConfig,
-    mut workload: impl Workload,
+    mut measurement: Measurement,
 ) -> Result<RunResult> {
-    workload.warm_up(config.warmup_time());
+    measurement.warm_up(config.warmup_time());
     let iterations_per_sample =
-        calibrate_workload_iterations(config.min_sample_time(), &mut workload);
+        calibrate_measurement_iterations(config.min_sample_time(), &mut measurement);
     let (samples, required_samples) = collect_adaptive_samples(
         config,
-        &mut workload,
+        &mut measurement,
         iterations_per_sample,
         |_sample_index, _sample| {},
     );
@@ -83,14 +83,14 @@ pub fn run_adaptive_measurement(
 
 pub fn collect_adaptive_samples(
     config: &MeasurementConfig,
-    workload: &mut dyn Workload,
+    measurement: &mut Measurement,
     iterations_per_sample: u64,
     mut on_sample: impl FnMut(usize, &Sample),
 ) -> (Vec<Sample>, usize) {
     let mut samples = Vec::with_capacity(config.max_samples());
     let mut required_samples = config.min_samples();
     for sample_index in 0..config.max_samples() {
-        let sample = workload.time_sample(linear_sample_iterations(
+        let sample = measurement.time_sample(linear_sample_iterations(
             iterations_per_sample,
             sample_index,
             required_samples,
@@ -116,14 +116,14 @@ pub fn collect_adaptive_samples(
 }
 
 pub fn collect_fixed_samples(
-    workload: &mut dyn Workload,
+    measurement: &mut Measurement,
     iterations_per_sample: u64,
     samples: usize,
     mut on_sample: impl FnMut(usize, &Sample),
 ) -> Vec<Sample> {
     (0..samples)
         .map(|sample_index| {
-            let sample = workload.time_sample(linear_sample_iterations(
+            let sample = measurement.time_sample(linear_sample_iterations(
                 iterations_per_sample,
                 sample_index,
                 samples,
@@ -150,13 +150,13 @@ pub fn run_result_from_samples(
     }
 }
 
-pub fn calibrate_workload_iterations(
+pub fn calibrate_measurement_iterations(
     min_sample_time: Duration,
-    workload: &mut dyn Workload,
+    measurement: &mut Measurement,
 ) -> u64 {
     let mut iterations = 1_u64;
     loop {
-        let elapsed = workload.time_sample(iterations).elapsed;
+        let elapsed = measurement.time_sample(iterations).elapsed;
         if elapsed >= min_sample_time {
             return iterations;
         }
