@@ -1,0 +1,18 @@
+[package]
+name = "flink"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+anyhow = "1"
+clap = { version = "4", features = ["derive"], optional = true }
+humantime = { version = "2", optional = true }
+
+[features]
+default = []
+cli = ["clap", "humantime"]
+
+[[example]]
+name = "cli"
+path = "examples/cli.rs"
+required-features = ["cli"]
