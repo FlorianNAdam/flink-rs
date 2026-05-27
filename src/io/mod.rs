@@ -4,12 +4,16 @@ use std::path::{Path, PathBuf};
 use std::str::FromStr;
 use std::time::Duration;
 
+use crate::Result;
 use crate::definition::CaseId;
 use crate::measurement::{MeasurementConfig, RunResult, Sample, Stats};
 use crate::runner::{BenchmarkResult, BenchmarkResults};
 use crate::util::sanitize_path_part;
-use crate::Result;
-use anyhow::{anyhow, bail, Context};
+use anyhow::{Context, anyhow, bail};
+
+use self::csv::parse_csv_row;
+
+mod csv;
 
 pub fn output_path(out_dir: &Path, id: &CaseId) -> PathBuf {
     let mut path = out_dir.to_path_buf().join("benchmarks");
@@ -234,34 +238,6 @@ fn load_result(path: &Path, config: &MeasurementConfig) -> Result<BenchmarkResul
     Ok(BenchmarkResult { id, result })
 }
 
-struct RowData {
-    iterations: u64,
-    elapsed_ns: u64,
-    baseline_elapsed_ns: String,
-}
-
-fn parse_csv_row(line: &str) -> Result<RowData> {
-    let fields: Vec<&str> = line.split(',').collect();
-    if fields.len() < 4 {
-        bail!("expected at least 4 CSV columns, got {}", fields.len());
-    }
-    Ok(RowData {
-        iterations: parse_field(&fields[1], "iterations")?,
-        elapsed_ns: parse_field(&fields[2], "elapsed_ns")?,
-        baseline_elapsed_ns: fields[3].to_string(),
-    })
-}
-
-fn parse_field<T: FromStr>(field: &str, name: &str) -> Result<T>
-where
-    T::Err: std::fmt::Display,
-{
-    field
-        .trim()
-        .parse::<T>()
-        .map_err(|e| anyhow!("failed to parse CSV column {name}: {e}"))
-}
-
 pub fn config_changed(out_dir: &Path, config: &MeasurementConfig) -> bool {
     let path = config_path(out_dir);
     let Ok(existing) = read_json_config(&path) else {
@@ -301,8 +277,8 @@ fn collect_csv_files(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::measurement::{run_adaptive_measurement, MeasurementBuilder, MeasurementConfig};
     use crate::CaseInput;
+    use crate::measurement::{MeasurementBuilder, MeasurementConfig, run_adaptive_measurement};
     use std::time::Duration;
 
     #[test]
@@ -319,8 +295,8 @@ mod tests {
         )
         .unwrap();
         let id = CaseId::new("bench", "var", CaseInput::scalar(42u64)).with_suite(["s1", "s2"]);
-        let measured = MeasurementBuilder::new().measure(|| 1u64).build();
-        let result = run_adaptive_measurement(&config, measured).unwrap();
+        let workload = MeasurementBuilder::new().measure(|| 1u64).build();
+        let result = run_adaptive_measurement(&config, workload).unwrap();
 
         let mut results = BenchmarkResults::new();
         results.push(BenchmarkResult { id, result });

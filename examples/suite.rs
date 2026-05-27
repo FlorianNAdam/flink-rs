@@ -1,7 +1,7 @@
 use std::time::Duration;
 
 use flink::{
-    Case, InputRange, MeasuredFn, MeasurementBuilder, MeasurementConfig, Runner, RunnerConfig,
+    Case, InputRange, MeasurementBuilder, MeasurementConfig, Runner, RunnerConfig, WorkloadFn,
 };
 
 fn main() -> flink::Result<()> {
@@ -36,7 +36,7 @@ fn main() -> flink::Result<()> {
     Ok(())
 }
 
-fn sum_with_iterator(benchmark: MeasurementBuilder, case: &Case) -> flink::Result<MeasuredFn> {
+fn sum_with_iterator(benchmark: MeasurementBuilder, case: &Case) -> flink::Result<WorkloadFn> {
     let rows = case.input_required("rows")?;
     let values = (0..rows).collect::<Vec<u64>>();
     Ok(benchmark
@@ -44,7 +44,7 @@ fn sum_with_iterator(benchmark: MeasurementBuilder, case: &Case) -> flink::Resul
         .build())
 }
 
-fn sum_with_loop(benchmark: MeasurementBuilder, case: &Case) -> flink::Result<MeasuredFn> {
+fn sum_with_loop(benchmark: MeasurementBuilder, case: &Case) -> flink::Result<WorkloadFn> {
     let rows = case.input_required("rows")?;
     let values = (0..rows).collect::<Vec<u64>>();
     Ok(benchmark

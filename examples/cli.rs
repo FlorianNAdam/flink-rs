@@ -2,7 +2,7 @@ use flink::cli::prebuilt;
 use std::thread::sleep;
 use std::time::Duration;
 
-use flink::{Case, InputRange, MeasuredFn, MeasurementBuilder};
+use flink::{Case, InputRange, MeasurementBuilder, WorkloadFn};
 
 fn main() -> flink::Result<()> {
     prebuilt::run(|runner| {
@@ -31,7 +31,7 @@ fn main() -> flink::Result<()> {
     })
 }
 
-fn sum_std_iter(measurement: MeasurementBuilder, case: &Case) -> flink::Result<MeasuredFn> {
+fn sum_std_iter(measurement: MeasurementBuilder, case: &Case) -> flink::Result<WorkloadFn> {
     let input = case.input_required("rows")?;
     let values = (0..input).collect::<Vec<u64>>();
     Ok(measurement
@@ -39,7 +39,7 @@ fn sum_std_iter(measurement: MeasurementBuilder, case: &Case) -> flink::Result<M
         .build())
 }
 
-fn matrix_nested_loop(measurement: MeasurementBuilder, case: &Case) -> flink::Result<MeasuredFn> {
+fn matrix_nested_loop(measurement: MeasurementBuilder, case: &Case) -> flink::Result<WorkloadFn> {
     let rows = case.input_required("rows")? as usize;
     let cols = case.input_required("cols")? as usize;
     let matrix = vec![vec![1u64; cols]; rows];
@@ -56,7 +56,7 @@ fn matrix_nested_loop(measurement: MeasurementBuilder, case: &Case) -> flink::Re
         .build())
 }
 
-fn matrix_flat_iter(measurement: MeasurementBuilder, case: &Case) -> flink::Result<MeasuredFn> {
+fn matrix_flat_iter(measurement: MeasurementBuilder, case: &Case) -> flink::Result<WorkloadFn> {
     let rows = case.input_required("rows")? as usize;
     let cols = case.input_required("cols")? as usize;
     let matrix = vec![vec![1u64; cols]; rows];
@@ -65,7 +65,7 @@ fn matrix_flat_iter(measurement: MeasurementBuilder, case: &Case) -> flink::Resu
         .build())
 }
 
-fn sleep_std(measurement: MeasurementBuilder, _case: &Case) -> flink::Result<MeasuredFn> {
+fn sleep_std(measurement: MeasurementBuilder, _case: &Case) -> flink::Result<WorkloadFn> {
     Ok(measurement
         .measure(|| sleep(Duration::from_micros(155)))
         .baseline(|| sleep(Duration::from_nanos(1)))

@@ -1,11 +1,11 @@
 //! Small evaluation helpers for timing functions across variants and inputs.
 //!
-//! The measured closure is the benchmarked operation. If an operation mutates
+//! The workload closure is the benchmarked operation. If an operation mutates
 //! state, include the reset, rebuild, or fresh-state construction inside that
 //! closure so every iteration measures the same semantics. Use
 //! [`measure_with_baseline`] when a cheap loop/setup baseline should be sampled
 //! and subtracted from each timing sample. Build immutable state before creating
-//! the measured closure when it should be excluded from measurement.
+//! the workload closure when it should be excluded from measurement.
 
 #[cfg(feature = "cli")]
 pub mod cli;
@@ -21,7 +21,7 @@ pub use definition::{
     CaseRunner, InputDimension, InputOverrideSpec, InputOverrides, InputRange, IntoBenchmarkPath,
 };
 pub use measurement::{
-    Measured, MeasuredFn, MeasurementBuilder, MeasurementConfig, RunResult, Sample, Stats,
+    MeasurementBuilder, MeasurementConfig, RunResult, Sample, Stats, Workload, WorkloadFn,
     calibrate_iterations, measure, measure_with_baseline, required_sample_count,
     run_adaptive_measurement,
 };
@@ -234,16 +234,16 @@ mod tests {
         let setup_count = Rc::new(Cell::new(0));
         setup_count.set(setup_count.get() + 1);
         let values = vec![1_u64, 2, 3];
-        let measured = MeasurementBuilder::new()
+        let workload = MeasurementBuilder::new()
             .measure(move || values.iter().sum::<u64>())
             .build();
-        let result = run_adaptive_measurement(&tiny_config(), measured).unwrap();
+        let result = run_adaptive_measurement(&tiny_config(), workload).unwrap();
 
         assert_eq!(setup_count.get(), 1);
         assert_eq!(result.samples.len(), 2);
     }
 
-    fn noop_case(benchmark: MeasurementBuilder, _case: &Case) -> Result<MeasuredFn> {
+    fn noop_case(benchmark: MeasurementBuilder, _case: &Case) -> Result<WorkloadFn> {
         Ok(benchmark.measure(|| 1_u64).build())
     }
 

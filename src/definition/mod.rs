@@ -1,5 +1,5 @@
 use crate::Result;
-use crate::measurement::{MeasuredFn, MeasurementBuilder, MeasurementConfig, RunResult};
+use crate::measurement::{MeasurementBuilder, MeasurementConfig, RunResult, WorkloadFn};
 use crate::util::sanitize_path_part;
 use anyhow::{anyhow, bail, ensure};
 use std::collections::BTreeMap;
@@ -238,7 +238,7 @@ pub struct Benchmark {
     variants: Vec<BenchmarkVariant>,
 }
 
-type VariantFn = dyn Fn(MeasurementBuilder, &Case) -> Result<MeasuredFn> + 'static;
+type VariantFn = dyn Fn(MeasurementBuilder, &Case) -> Result<WorkloadFn> + 'static;
 
 pub struct BenchmarkVariant {
     name: String,
@@ -272,7 +272,7 @@ impl Benchmark {
     pub fn variant(
         mut self,
         name: impl Into<String>,
-        run: impl Fn(MeasurementBuilder, &Case) -> Result<MeasuredFn> + 'static,
+        run: impl Fn(MeasurementBuilder, &Case) -> Result<WorkloadFn> + 'static,
     ) -> Self {
         self.variants.push(BenchmarkVariant {
             name: name.into(),
@@ -301,7 +301,7 @@ impl Benchmark {
             inputs: input_set.clone(),
         })
     }
-    pub fn measure_case(&self, case: &Case) -> Result<MeasuredFn> {
+    pub fn measure_case(&self, case: &Case) -> Result<WorkloadFn> {
         let variant = self.variant_for_case(case).ok_or_else(|| {
             anyhow!(
                 "unknown variant for benchmark {}: {}",
@@ -317,7 +317,7 @@ impl Benchmark {
         variants: impl IntoIterator<
             Item = (
                 impl Into<String>,
-                impl Fn(MeasurementBuilder, &Case) -> Result<MeasuredFn> + 'static,
+                impl Fn(MeasurementBuilder, &Case) -> Result<WorkloadFn> + 'static,
             ),
         >,
     ) -> Self {

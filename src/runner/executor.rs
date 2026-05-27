@@ -1,7 +1,7 @@
 use crate::Result;
 use crate::definition::{Benchmark, Case};
 use crate::measurement::{
-    Measured, MeasurementConfig, RunResult, Sample, calibrate_measured_iterations,
+    MeasurementConfig, RunResult, Sample, Workload, calibrate_workload_iterations,
     collect_adaptive_samples, collect_fixed_samples, run_result_from_samples,
 };
 use crate::runner::RunnerHook;
@@ -42,13 +42,13 @@ impl Executor for AdaptiveExecutor {
             .iter()
             .map(|case| {
                 hooks.on_case_start(case);
-                let mut measured = benchmark.measure_case(case)?;
+                let mut workload = benchmark.measure_case(case)?;
                 hooks.on_case_warmup_start(case);
-                measured.warm_up(measurement.warmup_time());
+                workload.warm_up(measurement.warmup_time());
                 hooks.on_case_warmup_finish(case);
                 hooks.on_case_calibration_start(case);
                 let iterations_per_sample =
-                    calibrate_measured_iterations(measurement.min_sample_time(), &mut measured);
+                    calibrate_workload_iterations(measurement.min_sample_time(), &mut workload);
                 hooks.on_case_calibration_finish(case, iterations_per_sample);
                 hooks.on_case_collection_start(
                     case,
@@ -57,7 +57,7 @@ impl Executor for AdaptiveExecutor {
                 );
                 let (samples, required_samples) = collect_adaptive_samples(
                     measurement,
-                    &mut measured,
+                    &mut workload,
                     iterations_per_sample,
                     |sample_index, sample| {
                         hooks.on_case_collection_sample(case, sample_index, sample);
@@ -102,21 +102,21 @@ impl Executor for FixedExecutor {
         measurement: &MeasurementConfig,
         hooks: &mut dyn RunnerHook,
     ) -> Result<Vec<RunResult>> {
-        let mut measured = cases
+        let mut workloads = cases
             .iter()
             .map(|case| benchmark.measure_case(case))
             .collect::<Result<Vec<_>>>()?;
 
         hooks.on_set_calibration_start(cases);
-        let iterations_per_sample = measured
+        let iterations_per_sample = workloads
             .iter_mut()
-            .map(|measured| {
+            .map(|workload| {
                 hooks.on_set_warmup_start(&cases);
-                measured.warm_up(measurement.warmup_time());
+                workload.warm_up(measurement.warmup_time());
                 hooks.on_set_warmup_finish(0);
 
                 hooks.on_set_calibration_start(&cases);
-                let ips = calibrate_measured_iterations(measurement.min_sample_time(), measured);
+                let ips = calibrate_workload_iterations(measurement.min_sample_time(), workload);
                 hooks.on_set_calibration_finish(ips);
 
                 ips
@@ -128,18 +128,18 @@ impl Executor for FixedExecutor {
 
         cases
             .iter()
-            .zip(measured.iter_mut())
-            .map(|(case, measured)| {
+            .zip(workloads.iter_mut())
+            .map(|(case, workload)| {
                 hooks.on_case_start(case);
 
                 hooks.on_case_warmup_start(case);
-                measured.warm_up(measurement.warmup_time());
+                workload.warm_up(measurement.warmup_time());
                 hooks.on_case_warmup_finish(case);
 
                 hooks.on_case_collection_start(case, iterations_per_sample, self.samples);
                 let result = run_fixed_measurement(
                     measurement,
-                    measured,
+                    workload,
                     iterations_per_sample,
                     self.samples,
                     |sample_index, sample| {
@@ -157,11 +157,11 @@ impl Executor for FixedExecutor {
 
 fn run_fixed_measurement(
     config: &MeasurementConfig,
-    measured: &mut dyn Measured,
+    workload: &mut dyn Workload,
     iterations_per_sample: u64,
     samples: usize,
     on_sample: impl FnMut(usize, &Sample),
 ) -> RunResult {
-    let samples = collect_fixed_samples(measured, iterations_per_sample, samples, on_sample);
+    let samples = collect_fixed_samples(workload, iterations_per_sample, samples, on_sample);
     run_result_from_samples(config, iterations_per_sample, samples.len(), samples)
 }

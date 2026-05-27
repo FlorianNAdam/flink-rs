@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use flink::{run_adaptive_measurement, MeasurementBuilder, MeasurementConfig};
+use flink::{MeasurementBuilder, MeasurementConfig, run_adaptive_measurement};
 
 fn main() -> flink::Result<()> {
     let default = MeasurementConfig::default();
@@ -13,10 +13,10 @@ fn main() -> flink::Result<()> {
         default.confidence_z(),
     )?;
     let values = (0..10_000).collect::<Vec<u64>>();
-    let measured = MeasurementBuilder::new()
+    let workload = MeasurementBuilder::new()
         .measure(move || values.iter().copied().sum::<u64>())
         .build();
-    let result = run_adaptive_measurement(&config, measured)?;
+    let result = run_adaptive_measurement(&config, workload)?;
 
     println!(
         "mean={:.3} ns, median={:.3} ns, samples={}",
